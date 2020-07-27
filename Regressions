@@ -1,0 +1,220 @@
+setwd("/Users/josiemurdoch/DOCUMENTS-/Masters/University of Edinburgh/MODULES/DISSERTATION/R-DISSERTATION/NEWFINAL")
+
+#opening GCF data - data in this source downloaded 8th July 
+#This is using the TotalGCF/Population variable
+GCF<-read.csv("GCFDATA-all-tidied.csv")
+#Opening independent variables 
+VulnerabilityNGGain<-read.csv("DATA-Vulnerability-NG-Gain.csv")
+VulnerabilityGermanWatch<-read.csv("DATA-Vulnerability-GermanWatch.csv")
+CO2Emissions<-read.csv("DATA-CO2TotalEmissions.csv")
+Gender<-read.csv("DATA-Gender.csv")
+Environment<-read.csv("DATA-EPI.csv")
+Democracy<-read.csv("DATA-GoodGovernance.csv")
+Fiduciary<-read.csv("DATA-BTI-Fiduciary.csv")
+TradeImports<-read.csv("DATA-TradeImports.csv")
+TradeExports<-read.csv("DATA-TradeExports.csv")
+GDPperCapita<-read.csv("DATA-GDPperCapita.csv")
+
+#Scaling the variables so they're all the same range
+install.packages("scales")
+library("scales")
+VulnerabilityNGGain$NGGainScaled<-rescale(VulnerabilityNGGain$Vulnerability)
+VulnerabilityGermanWatch$GermanWatchScaled<-rescale(VulnerabilityGermanWatch$GermanWatch)
+CO2Emissions$CO2EmissionsScaled<-rescale(CO2Emissions$CO2)
+Gender$GenderScaled<-rescale(Gender$Gender)
+Environment$EnvironmentScaled<-rescale(Environment$EPI)
+Democracy$DemocracyScaled<-rescale(Democracy$GoodGovernanceAverage)
+Fiduciary$FiduciaryScaled<-rescale(Fiduciary$Fiduciary)
+#Don't need to do Import, Export trade or GDP per capita because these are continuous rather than ordinal scales:
+
+#recoding GermanWatch - done in Excel for ease
+write.csv(VulnerabilityGermanWatch, 'VulnerabilityGermanWatch2.csv')
+VulnerabilityGermanWatch2<-read.csv("VulnerabilityGermanWatch2.1.csv")
+
+#recoding Gender Inequality Index - done in Excel for ease
+write.csv(Gender, 'Gender2.csv')
+Gender2<-read.csv('Gender2.1.csv')
+
+#merging datasets
+ALL1<-merge(GCF,VulnerabilityNGGain,by="CountryID",all=FALSE)
+ALL2<-merge(ALL1,VulnerabilityGermanWatch2,by="CountryID",all=FALSE)
+ALL3<-merge(ALL2,CO2Emissions,by="CountryID",all=FALSE)
+ALL4<-merge(ALL3,Gender2,by="CountryID",all=FALSE)
+ALL5<-merge(ALL4,Environment,by="CountryID",all=FALSE)
+ALL6<-merge(ALL5,Democracy,by="CountryID",all=FALSE)
+ALL7<-merge(ALL6,Fiduciary,by="CountryID",all=FALSE)
+ALL8<-merge(ALL7,TradeImports,by="CountryID",all=FALSE)
+ALL9<-merge(ALL8,TradeExports,by="CountryID",all=FALSE)
+ALL10<-merge(ALL9,GDPperCapita,by="CountryID",all=FALSE)
+
+#Making a log on the Total GCF Spend
+ALL10$TotalGCFbyPopulationLog<-log(ALL10$TotalGCFbyPopulation)
+#Has generated some negative values in the log so adding a constant of 1
+ALL10$TotalGCFbyPopulationLogConstant<-log(ALL10$TotalGCFbyPopulation+1)
+#Everything is now positive
+
+#Regression 1: All GCF Project Types 
+AllGCFProjects<-lm(TotalGCFbyPopulationLogConstant ~ NGGainScaled+
+                     GermanWatchRecoded+
+                     Africa+
+                     LDC+
+                     SIDS+
+                     CO2EmissionsScaled+
+                     GDPpercapita+
+                     GenderRecoded+
+                     EnvironmentScaled+
+                     DemocracyScaled+
+                     FiduciaryScaled+
+                     TradeImports+
+                     TradeExports, data = ALL10)
+summary(AllGCFProjects)
+resid(AllGCFProjects)
+plot(AllGCFProjects)
+
+#Regression 2: Mitigation-only projects
+GCFmitigation<-read.csv('GCFDATA-mitigation-tidied.csv')
+
+#Merging datasets with mitigation
+Mitigation1<-merge(GCFmitigation,VulnerabilityNGGain,by="CountryID",all=FALSE)
+Mitigation2<-merge(Mitigation1,VulnerabilityGermanWatch2,by="CountryID",all=FALSE)
+Mitigation3<-merge(Mitigation2,CO2Emissions,by="CountryID",all=FALSE)
+Mitigation4<-merge(Mitigation3,Gender2,by="CountryID",all=FALSE)
+Mitigation5<-merge(Mitigation4,Environment,by="CountryID",all=FALSE)
+Mitigation6<-merge(Mitigation5,Democracy,by="CountryID",all=FALSE)
+Mitigation7<-merge(Mitigation6,Fiduciary,by="CountryID",all=FALSE)
+Mitigation8<-merge(Mitigation7,TradeImports,by="CountryID",all=FALSE)
+Mitigation9<-merge(Mitigation8,TradeExports,by="CountryID",all=FALSE)
+Mitigation10<-merge(Mitigation9,GDPperCapita,by="CountryID",all=FALSE)
+
+#Creating log - mitigating negative values by adding a constant
+Mitigation10$TotalGCFbyPopulationLogConstant<-log(Mitigation10$TotalGCFbyPopulation+1)
+
+#Running a new regression
+MitigationOnly<-lm(TotalGCFbyPopulationLogConstant ~ 
+                     NGGainScaled+
+                     GermanWatchRecoded+
+                     Africa+
+                     LDC+
+                     SIDS+
+                     CO2EmissionsScaled+
+                     GDPpercapita+
+                     GenderRecoded+
+                     EnvironmentScaled+
+                     DemocracyScaled+
+                     FiduciaryScaled+
+                     TradeImports+
+                     TradeExports, data = Mitigation10)
+summary(MitigationOnly)
+resid(MitigationOnly)
+plot(MitigationOnly)
+
+#Adaptation-only projects
+GCFadaptation<-read.csv('GCFDATA-adaptation-tidied.csv')
+
+#Merging datasets with mitigation
+Adaptation1<-merge(GCFadaptation,VulnerabilityNGGain,by="CountryID",all=FALSE)
+Adaptation2<-merge(Adaptation1,VulnerabilityGermanWatch2,by="CountryID",all=FALSE)
+Adaptation3<-merge(Adaptation2,CO2Emissions,by="CountryID",all=FALSE)
+Adaptation4<-merge(Adaptation3,Gender2,by="CountryID",all=FALSE)
+Adaptation5<-merge(Adaptation4,Environment,by="CountryID",all=FALSE)
+Adaptation6<-merge(Adaptation5,Democracy,by="CountryID",all=FALSE)
+Adaptation7<-merge(Adaptation6,Fiduciary,by="CountryID",all=FALSE)
+Adaptation8<-merge(Adaptation7,TradeImports,by="CountryID",all=FALSE)
+Adaptation9<-merge(Adaptation8,TradeExports,by="CountryID",all=FALSE)
+Adaptation10<-merge(Adaptation9,GDPperCapita,by="CountryID",all=FALSE)
+
+#Creating log - mitigating negative values by adding a constant
+Adaptation10$TotalGCFbyPopulationLogConstant<-log(Adaptation10$TotalGCFbyPopulation+1)
+
+#Running a new regression
+AdaptationOnly<-lm(TotalGCFbyPopulationLogConstant ~ 
+                     NGGainScaled+
+                     GermanWatchRecoded+
+                     Africa+
+                     LDC+
+                     SIDS+
+                     CO2EmissionsScaled+
+                     GDPpercapita+
+                     GenderRecoded+
+                     EnvironmentScaled+
+                     DemocracyScaled+
+                     FiduciaryScaled+
+                     TradeImports+
+                     TradeExports, data = Adaptation10)
+summary(AdaptationOnly)
+resid(AdaptationOnly)
+plot(AdaptationOnly)
+
+#Public-only projects
+GCFpublic<-read.csv('GCFDATA-public-tidied.csv')
+
+#Merging datasets with mitigation
+Public1<-merge(GCFpublic,VulnerabilityNGGain,by="CountryID",all=FALSE)
+Public2<-merge(Public1,VulnerabilityGermanWatch2,by="CountryID",all=FALSE)
+Public3<-merge(Public2,CO2Emissions,by="CountryID",all=FALSE)
+Public4<-merge(Public3,Gender2,by="CountryID",all=FALSE)
+Public5<-merge(Public4,Environment,by="CountryID",all=FALSE)
+Public6<-merge(Public5,Democracy,by="CountryID",all=FALSE)
+Public7<-merge(Public6,Fiduciary,by="CountryID",all=FALSE)
+Public8<-merge(Public7,TradeImports,by="CountryID",all=FALSE)
+Public9<-merge(Public8,TradeExports,by="CountryID",all=FALSE)
+Public10<-merge(Public9,GDPperCapita,by="CountryID",all=FALSE)
+
+#Creating log - mitigating negative values by adding a constant
+Public10$TotalGCFbyPopulationLogConstant<-log(Public10$TotalGCFbyPopulation+1)
+
+#Running a new regression
+PublicOnly<-lm(TotalGCFbyPopulationLogConstant ~ 
+                 NGGainScaled+
+                 GermanWatchRecoded+
+                 Africa+
+                 LDC+
+                 SIDS+
+                 CO2EmissionsScaled+
+                 GDPpercapita+
+                 GenderRecoded+
+                 EnvironmentScaled+
+                 DemocracyScaled+
+                 FiduciaryScaled+
+                 TradeImports+
+                 TradeExports, data = Public10)
+summary(PublicOnly)
+resid(PublicOnly)
+plot(PublicOnly)
+
+#Private-only projects
+GCFprivate<-read.csv('GCFDATA-private-tidied.csv')
+
+#Merging datasets with mitigation
+Private1<-merge(GCFprivate,VulnerabilityNGGain,by="CountryID",all=FALSE)
+Private2<-merge(Private1,VulnerabilityGermanWatch2,by="CountryID",all=FALSE)
+Private3<-merge(Private2,CO2Emissions,by="CountryID",all=FALSE)
+Private4<-merge(Private3,Gender2,by="CountryID",all=FALSE)
+Private5<-merge(Private4,Environment,by="CountryID",all=FALSE)
+Private6<-merge(Private5,Democracy,by="CountryID",all=FALSE)
+Private7<-merge(Private6,Fiduciary,by="CountryID",all=FALSE)
+Private8<-merge(Private7,TradeImports,by="CountryID",all=FALSE)
+Private9<-merge(Private8,TradeExports,by="CountryID",all=FALSE)
+Private10<-merge(Private9,GDPperCapita,by="CountryID",all=FALSE)
+
+#Creating log - mitigating negative values by adding a constant
+Private10$TotalGCFbyPopulationLogConstant<-log(Private10$TotalGCFbyPopulation+1)
+
+#Running a new regression
+PrivateOnly<-lm(TotalGCFbyPopulationLogConstant ~ 
+                  NGGainScaled+
+                  GermanWatchRecoded+
+                  Africa+
+                  LDC+
+                  SIDS+
+                  CO2EmissionsScaled+
+                  GDPpercapita+
+                  GenderRecoded+
+                  EnvironmentScaled+
+                  DemocracyScaled+
+                  FiduciaryScaled+
+                  TradeImports+
+                  TradeExports, data = Private10)
+summary(PrivateOnly)
+resid(PrivateOnly)
+plot(PrivateOnly)
